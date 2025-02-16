@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Disease Detection - Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+</head>
+<body>
+    <div class="page-container">
+        <header class="header">
+            <div class="header-content">
+                <a href="{{ url_for('home') }}" class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L3 7L12 12L21 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 17L12 22L21 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 12L12 17L21 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    PlantCare AI
+                </a>
+                <nav class="nav">
+                    <ul class="nav-list">
+                        <li><a href="{{ url_for('home') }}" class="nav-link">Home</a></li>
+                        <li><a href="{{ url_for('market') }}" class="nav-link">Market</a></li>
+                        <li><a href="{{ url_for('contact') }}" class="nav-link">Contact</a></li>
+                        <li><a href="{{ url_for('logout') }}" class="nav-link nav-link-login">Logout</a></li>
+
+                    </ul>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="upload-section">
+                <h1 class="title">Plant Disease Detection</h1>
+                <form id="upload-form" class="upload-form" enctype="multipart/form-data">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="image-upload" accept="image/*" required class="file-input">
+                        <label for="image-upload" class="file-label">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Choose an image
+                        </label>
+                    </div>
+                    <button type="submit" class="submit-button">
+                        <span class="button-text">Analyze Image</span>
+                        <div class="loading-spinner"></div>
+                    </button>
+                </form>
+            </div>
+
+            <div id="result-container" class="result-container hidden">
+                <div class="result-card">
+                    <div class="image-section">
+                        <img id="uploaded-image" src="/placeholder.svg" alt="Uploaded Plant" class="result-image">
+                    </div>
+                    <div class="info-section">
+                        <div class="prediction-details">
+                            <h2 class="section-title">Analysis Result</h2>
+                            <div class="detail-item">
+                                <span class="detail-label">Predicted Disease:</span>
+                                <span id="predicted-disease" class="detail-value"></span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Confidence Level:</span>
+                                <span id="confidence-level" class="detail-value"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3 class="card-title">Disease Information</h3>
+                        <div class="card-content">
+                            <h4 class="content-title">Description:</h4>
+                            <p id="disease-description" class="content-text"></p>
+                            <h4 class="content-title">Treatment Steps:</h4>
+                            <p id="disease-steps" class="content-text"></p>
+                        </div>
+                    </div>
+                            <div class="info-card action-card">
+                                <h3 class="card-title">Recommended Action</h3>
+                                <div class="card-content centered" id="supplement-section">
+                                    <p class="content-text">Find recommended supplements and treatments in our market.</p>
+                                    <img id="supplement-image" src="" alt="Supplement Image" class="supplement-image hidden">
+                                    <p id="supplement-name" class="content-text"></p>
+                                    <a id="buy-link" href="#" target="_blank" class="market-button hidden">
+                                        <span>Buy Now</span>
+                                       
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>                            
+                                
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const submitButton = form.querySelector('.submit-button');
+        const buttonText = submitButton.querySelector('.button-text');
+        const fileInput = document.getElementById('image-upload');
+        const fileLabel = document.querySelector('.file-label');
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileLabel.textContent = fileInput.files[0].name;
+            } else {
+                fileLabel.textContent = 'Choose an image';
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                submitButton.classList.add('loading');
+                buttonText.textContent = 'Analyzing...';
+
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                document.getElementById('uploaded-image').src = data.uploaded_image_url;
+                document.getElementById('predicted-disease').textContent = data.predicted_class;
+                document.getElementById('confidence-level').textContent = data.confidence;
+                document.getElementById('disease-description').textContent = data.description;
+                document.getElementById('disease-steps').textContent = data.steps;
+                
+                document.getElementById('result-container').classList.remove('hidden');
+                document.getElementById('result-container').scrollIntoView({ behavior: 'smooth' });
+
+                // Update supplement section if data is available
+                if (data.supplement) {
+                    const supplementImage = document.getElementById('supplement-image');
+                    const supplementName = document.getElementById('supplement-name');
+                    const buyLink = document.getElementById('buy-link');
+
+                    supplementName.textContent = data.supplement.name;
+                    supplementImage.src = data.supplement.image;
+                    supplementImage.classList.remove('hidden'); // Show the image
+                    buyLink.href = data.supplement.buy_link;
+                    buyLink.classList.remove('hidden'); // Show the button
+                } else {
+                    document.getElementById('supplement-section').classList.add('hidden'); // Hide if no supplement
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(error.message || 'An error occurred. Please try again.');
+            } finally {
+                submitButton.classList.remove('loading');
+                buttonText.textContent = 'Analyze Image';
+            }
+        });
+    </script>
+    <script>
+        document.getElementById('logout-button').addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch("{{ url_for('logout') }}", { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = "{{ url_for('home') }}";
+                } else {
+                    console.error("Logout failed");
+                }
+            } catch (error) {
+                console.error("Error logging out:", error);
+            }
+        });
+    </script>
+</body>
+</html> 
